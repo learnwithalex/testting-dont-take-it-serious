@@ -46,7 +46,7 @@ class ApiService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://nft-work-backend.vercel.app';
   }
 
   private getAuthHeaders(): HeadersInit {
