@@ -72,78 +72,99 @@ export default function AdminTransactionsPage() {
   });
   const router = useRouter();
 
-  const fetchTransactions = async (page = 1) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/auth/login');
-        return;
-      }
-
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '20',
-        search: filters.search,
-        type: filters.type !== 'all' ? filters.type : '',
-        status: filters.status !== 'all' ? filters.status : '',
-        currency: filters.currency !== 'all' ? filters.currency : '',
-        dateFrom: filters.dateFrom,
-        dateTo: filters.dateTo,
-        minAmount: filters.minAmount,
-        maxAmount: filters.maxAmount,
-        sortBy: filters.sortBy,
-        sortOrder: filters.sortOrder
-      });
-
-      const response = await fetch(`/api/admin/transactions?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 403) {
-          throw new Error('Access denied. Admin privileges required.');
-        }
-        throw new Error('Failed to fetch transactions');
-      }
-
-      const data = await response.json();
-      setTransactions(data.transactions);
-      setTotalPages(Math.ceil(data.total / 20));
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load transactions');
+  // Mock transactions data
+  const mockTransactions: Transaction[] = [
+    {
+      id: '1',
+      userId: '1',
+      user: { username: 'johndoe', email: 'john.doe@example.com' },
+      type: 'PURCHASE',
+      amount: 2.5,
+      currency: 'ETH',
+      status: 'COMPLETED',
+      description: 'NFT Purchase - Digital Art #001',
+      transactionHash: '0xabc123def456...',
+      nftId: '1',
+      nft: { title: 'Digital Art #001', imageUrl: '/placeholder-nft.jpg' },
+      createdAt: '2024-01-21T10:30:00Z',
+      completedAt: '2024-01-21T10:32:00Z'
+    },
+    {
+      id: '2',
+      userId: '2',
+      user: { username: 'janesmith', email: 'jane.smith@example.com' },
+      type: 'DEPOSIT',
+      amount: 1000.0,
+      currency: 'USDC',
+      status: 'COMPLETED',
+      description: 'Wallet Deposit',
+      transactionHash: '0xdef456ghi789...',
+      createdAt: '2024-01-21T09:15:00Z',
+      completedAt: '2024-01-21T09:17:00Z'
+    },
+    {
+      id: '3',
+      userId: '3',
+      user: { username: 'bobwilson', email: 'bob.wilson@example.com' },
+      type: 'WITHDRAWAL',
+      amount: 500.0,
+      currency: 'USDC',
+      status: 'PENDING',
+      description: 'Wallet Withdrawal',
+      createdAt: '2024-01-21T14:20:00Z'
+    },
+    {
+      id: '4',
+      userId: '1',
+      user: { username: 'johndoe', email: 'john.doe@example.com' },
+      type: 'SALE',
+      amount: 3.2,
+      currency: 'ETH',
+      status: 'COMPLETED',
+      description: 'NFT Sale - Abstract Art #123',
+      transactionHash: '0xghi789jkl012...',
+      nftId: '4',
+      nft: { title: 'Abstract Art #123', imageUrl: '/placeholder-nft.jpg' },
+      createdAt: '2024-01-20T16:45:00Z',
+      completedAt: '2024-01-20T16:47:00Z'
+    },
+    {
+      id: '5',
+      userId: '4',
+      user: { username: 'alicebrown', email: 'alice.brown@example.com' },
+      type: 'AUCTION_BID',
+      amount: 1.8,
+      currency: 'ETH',
+      status: 'FAILED',
+      description: 'Auction Bid - Crypto Punk #456',
+      createdAt: '2024-01-19T12:30:00Z'
     }
+  ];
+
+  const mockStats: TransactionStats = {
+    totalTransactions: 1247,
+    totalVolume: 45678.90,
+    pendingTransactions: 23,
+    failedTransactions: 15,
+    todayTransactions: 87,
+    todayVolume: 12345.67,
+    averageTransactionValue: 36.65,
+    topTransactionType: 'PURCHASE'
   };
 
-  const fetchStats = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch('/api/admin/transactions/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error('Error fetching transaction stats:', error);
-    }
+  const initializeMockData = () => {
+    setIsLoading(true);
+    // Simulate loading delay
+    setTimeout(() => {
+      setTransactions(mockTransactions);
+      setStats(mockStats);
+      setTotalPages(1); // Since we have a small mock dataset
+      setIsLoading(false);
+    }, 500);
   };
 
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      await Promise.all([fetchTransactions(currentPage), fetchStats()]);
-      setIsLoading(false);
-    };
-    loadData();
+    initializeMockData();
   }, [currentPage, filters, router]);
 
   const handleFilterChange = (key: keyof TransactionFilters, value: string) => {
@@ -152,65 +173,54 @@ export default function AdminTransactionsPage() {
   };
 
   const handleTransactionAction = async (transactionId: string, action: 'approve' | 'reject' | 'cancel') => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch(`/api/admin/transactions/${transactionId}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update transaction');
-      }
-
-      // Refresh transactions list
-      fetchTransactions(currentPage);
-      fetchStats();
-    } catch (error) {
-      console.error('Error updating transaction:', error);
-      alert('Failed to update transaction');
-    }
+    // Simulate transaction action with mock functionality
+    setTimeout(() => {
+      setTransactions(prevTransactions => 
+        prevTransactions.map(transaction => {
+          if (transaction.id === transactionId) {
+            switch (action) {
+              case 'approve':
+                return { ...transaction, status: 'COMPLETED' as const };
+              case 'reject':
+              case 'cancel':
+                return { ...transaction, status: 'CANCELLED' as const };
+              default:
+                return transaction;
+            }
+          }
+          return transaction;
+        })
+      );
+    }, 500);
   };
 
   const exportTransactions = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
+    // Simulate export functionality with mock data
+    const csvData = transactions.map(transaction => ({
+      ID: transaction.id,
+      Type: transaction.type,
+      Amount: transaction.amount,
+      Currency: transaction.currency,
+      Status: transaction.status,
+      User: transaction.user.username,
+      Date: transaction.createdAt,
+      Hash: transaction.transactionHash || 'N/A'
+    }));
 
-      const params = new URLSearchParams({
-        ...filters,
-        export: 'true'
-      });
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).join(','))
+    ].join('\n');
 
-      const response = await fetch(`/api/admin/transactions/export?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to export transactions');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error exporting transactions:', error);
-      alert('Failed to export transactions');
-    }
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   const formatDate = (dateString: string) => {

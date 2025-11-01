@@ -25,49 +25,84 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch transactions from API
-  const fetchTransactions = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
+  // Mock transactions data
+  const mockTransactions: Transaction[] = [
+    {
+      id: '1',
+      type: 'DEPOSIT',
+      amount: '2.5 ETH',
+      date: new Date(Date.now() - 86400000).toLocaleString(),
+      status: 'COMPLETED',
+      description: 'Wallet deposit',
+      transactionHash: '0x1234567890abcdef1234567890abcdef12345678'
+    },
+    {
+      id: '2',
+      type: 'MINT',
+      amount: '0.1 ETH',
+      date: new Date(Date.now() - 172800000).toLocaleString(),
+      status: 'COMPLETED',
+      description: 'Minted "Digital Art #001"',
+      transactionHash: '0xabcdef1234567890abcdef1234567890abcdef12',
+      nft: {
+        title: 'Digital Art #001',
+        image: '/placeholder-nft.jpg'
       }
-
-      const response = await fetch('/api/transactions?limit=50', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch transactions');
+    },
+    {
+      id: '3',
+      type: 'SALE',
+      amount: '1.8 ETH',
+      date: new Date(Date.now() - 259200000).toLocaleString(),
+      status: 'COMPLETED',
+      description: 'Sold "Crypto Punk #123"',
+      transactionHash: '0x567890abcdef1234567890abcdef1234567890ab',
+      nft: {
+        title: 'Crypto Punk #123',
+        image: '/placeholder-nft.jpg'
       }
-
-      const data = await response.json();
-      
-      // Transform API data to match component interface
-      const transformedTransactions = data.transactions.map((tx: any) => ({
-        id: tx.id,
-        type: tx.type,
-        amount: `${tx.amount} ETH`,
-        date: new Date(tx.createdAt).toLocaleString(),
-        status: tx.status,
-        description: getTransactionDescription(tx),
-        transactionHash: tx.transactionHash,
-        nftId: tx.nFTId,
-        nft: tx.nFT ? {
-          title: tx.nFT.title,
-          image: tx.nFT.image,
-        } : undefined,
-      }));
-
-      setTransactions(transformedTransactions);
-    } catch (error) {
-      console.error('Error fetching transactions:', error);
-      setError('Failed to load transactions');
-    } finally {
-      setLoading(false);
+    },
+    {
+      id: '4',
+      type: 'PURCHASE',
+      amount: '0.5 ETH',
+      date: new Date(Date.now() - 345600000).toLocaleString(),
+      status: 'COMPLETED',
+      description: 'Purchased "Abstract NFT #456"',
+      transactionHash: '0x890abcdef1234567890abcdef1234567890abcdef',
+      nft: {
+        title: 'Abstract NFT #456',
+        image: '/placeholder-nft.jpg'
+      }
+    },
+    {
+      id: '5',
+      type: 'WITHDRAWAL',
+      amount: '1.0 ETH',
+      date: new Date(Date.now() - 432000000).toLocaleString(),
+      status: 'PENDING',
+      description: 'Withdrawal to wallet',
+      transactionHash: '0xdef1234567890abcdef1234567890abcdef123456'
+    },
+    {
+      id: '6',
+      type: 'COMMISSION',
+      amount: '0.05 ETH',
+      date: new Date(Date.now() - 518400000).toLocaleString(),
+      status: 'COMPLETED',
+      description: 'Platform commission',
+      transactionHash: '0x234567890abcdef1234567890abcdef1234567890'
     }
+  ];
+
+  // Initialize with mock data
+  const initializeTransactions = () => {
+    setLoading(true);
+    // Simulate loading delay
+    setTimeout(() => {
+      setTransactions(mockTransactions);
+      setLoading(false);
+    }, 500);
   };
 
   // Generate description based on transaction type and data
@@ -91,7 +126,7 @@ export default function TransactionsPage() {
   };
 
   useEffect(() => {
-    fetchTransactions();
+    initializeTransactions();
   }, []);
 
   const filteredTransactions = activeTab === 'all' 

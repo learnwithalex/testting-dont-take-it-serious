@@ -30,100 +30,60 @@ const WithdrawalPage = () => {
   const [withdrawalsLoading, setWithdrawalsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch user balance and withdrawal stats
-  const fetchUserBalance = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token is invalid or expired, clear storage and redirect to login
-          localStorage.removeItem('token');
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
-          localStorage.removeItem('isAuthenticated');
-          window.location.href = '/auth/login';
-          return;
-        }
-        throw new Error('Failed to fetch user data');
-      }
-
-      const userData = await response.json();
-      
-      // Calculate withdrawal statistics from user's transactions
-      const withdrawalStats = userData.transactions?.filter((tx: any) => tx.type === 'WITHDRAWAL') || [];
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      
-      const monthlyWithdrawn = withdrawalStats
-        .filter((tx: any) => {
-          const txDate = new Date(tx.createdAt);
-          return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
-        })
-        .reduce((sum: number, tx: any) => sum + parseFloat(tx.amount), 0);
-
-      const totalWithdrawn = withdrawalStats
-        .filter((tx: any) => tx.status === 'COMPLETED')
-        .reduce((sum: number, tx: any) => sum + parseFloat(tx.amount), 0);
-
-      const pendingWithdrawals = withdrawalStats
-        .filter((tx: any) => tx.status === 'PENDING')
-        .reduce((sum: number, tx: any) => sum + parseFloat(tx.amount), 0);
-
-      setUserBalance({
-        balance: userData.balance || 0,
-        totalWithdrawn,
-        monthlyWithdrawn,
-        pendingWithdrawals,
-      });
-    } catch (error) {
-      console.error('Error fetching user balance:', error);
-      setError('Failed to load balance information');
-    } finally {
-      setBalanceLoading(false);
-    }
+  // Mock user balance data
+  const mockUserBalance: UserBalance = {
+    balance: 5.234,
+    totalWithdrawn: 12.5,
+    monthlyWithdrawn: 3.2,
+    pendingWithdrawals: 1.0,
   };
 
-  // Fetch recent withdrawals
-  const fetchRecentWithdrawals = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('/api/transactions?type=WITHDRAWAL&limit=10', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch withdrawals');
-      }
-
-      const data = await response.json();
-      setRecentWithdrawals(data.transactions || []);
-    } catch (error) {
-      console.error('Error fetching withdrawals:', error);
-      setError('Failed to load withdrawal history');
-    } finally {
-      setWithdrawalsLoading(false);
+  // Mock recent withdrawals data
+  const mockRecentWithdrawals: Withdrawal[] = [
+    {
+      id: '1',
+      amount: '1.5',
+      recipientAddress: '0x1234567890abcdef1234567890abcdef12345678',
+      status: 'COMPLETED',
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      transactionHash: '0x1234567890abcdef1234567890abcdef12345678'
+    },
+    {
+      id: '2',
+      amount: '0.8',
+      recipientAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
+      status: 'PENDING',
+      createdAt: new Date(Date.now() - 172800000).toISOString(),
+    },
+    {
+      id: '3',
+      amount: '2.3',
+      recipientAddress: '0x567890abcdef1234567890abcdef1234567890ab',
+      status: 'COMPLETED',
+      createdAt: new Date(Date.now() - 259200000).toISOString(),
+      transactionHash: '0x567890abcdef1234567890abcdef1234567890ab'
     }
+  ];
+
+  // Initialize with mock data
+  const initializeMockData = () => {
+    setBalanceLoading(true);
+    setWithdrawalsLoading(true);
+    
+    // Simulate loading delay
+    setTimeout(() => {
+      setUserBalance(mockUserBalance);
+      setBalanceLoading(false);
+    }, 300);
+    
+    setTimeout(() => {
+      setRecentWithdrawals(mockRecentWithdrawals);
+      setWithdrawalsLoading(false);
+    }, 500);
   };
 
   useEffect(() => {
-    fetchUserBalance();
-    fetchRecentWithdrawals();
+    initializeMockData();
   }, []);
 
   const handleWithdrawal = async () => {
@@ -145,48 +105,44 @@ const WithdrawalPage = () => {
     setIsLoading(true);
     setError(null);
 
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: 'WITHDRAWAL',
-          amount: parseFloat(withdrawalAmount),
+    // Simulate withdrawal processing with mock data
+    setTimeout(() => {
+      try {
+        // Generate mock transaction hash
+        const mockTransactionHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+        setTransactionHash(mockTransactionHash);
+        
+        // Create new withdrawal entry
+        const newWithdrawal: Withdrawal = {
+          id: Date.now().toString(),
+          amount: withdrawalAmount,
           recipientAddress,
-          metadata: {
-            networkFee: 0.002,
-            network: 'ethereum',
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to process withdrawal');
+          status: 'PENDING',
+          createdAt: new Date().toISOString(),
+        };
+        
+        // Update recent withdrawals
+        setRecentWithdrawals(prev => [newWithdrawal, ...prev.slice(0, 9)]);
+        
+        // Update user balance
+        if (userBalance) {
+          const newBalance = userBalance.balance - parseFloat(withdrawalAmount) - 0.002; // Subtract amount + gas fee
+          setUserBalance({
+            ...userBalance,
+            balance: Math.max(0, newBalance),
+            pendingWithdrawals: userBalance.pendingWithdrawals + parseFloat(withdrawalAmount),
+          });
+        }
+        
+        setWithdrawalAmount('');
+        setRecipientAddress('');
+      } catch (error) {
+        console.error('Error processing withdrawal:', error);
+        setError('Failed to process withdrawal');
+      } finally {
+        setIsLoading(false);
       }
-
-      const result = await response.json();
-      setTransactionHash(result.transactionHash || result.id);
-      setWithdrawalAmount('');
-      setRecipientAddress('');
-      
-      // Refresh data
-      fetchUserBalance();
-      fetchRecentWithdrawals();
-    } catch (error) {
-      console.error('Error processing withdrawal:', error);
-      setError(error instanceof Error ? error.message : 'Failed to process withdrawal');
-    } finally {
-      setIsLoading(false);
-    }
+    }, 2000); // Simulate 2 second processing time
   };
 
   const setMaxAmount = () => {

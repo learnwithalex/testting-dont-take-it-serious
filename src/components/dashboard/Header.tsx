@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -18,8 +19,8 @@ interface Notification {
 
 export default function Header({ onToggleSidebar }: HeaderProps) {
   const router = useRouter();
+  const { user, logout } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState<string>('');
   const [scrolled, setScrolled] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -28,133 +29,38 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
+  // Mock notifications data
+  const mockNotifications: Notification[] = [
+    {
+      id: '1',
+      title: 'NFT Sale Completed',
+      desc: 'Digital Art #1234 - 2.5 ETH',
+      time: '5m ago',
+      unread: true,
+      type: 'transaction'
+    },
+    {
+      id: '2',
+      title: 'New Bid Received',
+      desc: 'Crypto Punk #5678 - Current bid: 15.2 ETH',
+      time: '1h ago',
+      unread: true,
+      type: 'auction'
+    },
+    {
+      id: '3',
+      title: 'Welcome to Etheryte',
+      desc: 'Start creating and trading NFTs on our platform',
+      time: '2h ago',
+      unread: false,
+      type: 'system'
+    }
+  ];
+
   useEffect(() => {
-    // Fetch user data and notifications
-    const fetchUserData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          console.log("No token found, redirecting to login")
-          router.push('/auth/login');
-          return;
-        }
-
-        // Fetch user profile
-        const userResponse = await fetch('/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          setUserEmail(userData.user.email);
-        } else if (userResponse.status === 401) {
-          console.log("here i guess")
-          // Token is invalid or expired, clear storage and redirect to login
-          localStorage.removeItem('token');
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
-          localStorage.removeItem('isAuthenticated');
-          router.push('/auth/login');
-          return;
-        }
-
-        // Fetch notifications (simulated endpoint - you may need to create this)
-        await fetchNotifications();
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    const fetchNotifications = async () => {
-      try {
-        setNotificationsLoading(true);
-        const token = localStorage.getItem('token');
-        
-        // For now, we'll simulate notifications based on recent activities
-        // You can create a dedicated notifications API endpoint later
-        const [transactionsRes, auctionsRes] = await Promise.all([
-          fetch('/api/transactions?limit=5', {
-            headers: { 'Authorization': `Bearer ${token}` },
-          }),
-          fetch('/api/auctions?limit=5', {
-            headers: { 'Authorization': `Bearer ${token}` },
-          }),
-        ]);
-
-        const mockNotifications: Notification[] = [];
-        
-        if (transactionsRes.ok) {
-          const transactionsData = await transactionsRes.json();
-          transactionsData.transactions?.slice(0, 2).forEach((transaction: any, index: number) => {
-            mockNotifications.push({
-              id: `tx-${transaction.id}`,
-              title: transaction.type === 'SALE' ? 'NFT Sale Completed' : 'New Transaction',
-              desc: `${transaction.nft.name} - ${transaction.amount} ETH`,
-              time: getRelativeTime(transaction.createdAt),
-              unread: index === 0,
-              type: 'transaction'
-            });
-          });
-        }
-
-        if (auctionsRes.ok) {
-          const auctionsData = await auctionsRes.json();
-          auctionsData.auctions?.slice(0, 2).forEach((auction: any, index: number) => {
-            mockNotifications.push({
-              id: `auction-${auction.id}`,
-              title: auction.status === 'ACTIVE' ? 'New Bid Received' : 'Auction Update',
-              desc: `${auction.nft.name} - Current bid: ${auction.currentBid || auction.startingPrice} ETH`,
-              time: getRelativeTime(auction.updatedAt),
-              unread: index === 0,
-              type: 'auction'
-            });
-          });
-        }
-
-        // Add a welcome notification if no real notifications
-        if (mockNotifications.length === 0) {
-          mockNotifications.push({
-            id: 'welcome',
-            title: 'Welcome to Etheryte',
-            desc: 'Start creating and trading NFTs on our platform',
-            time: '1h ago',
-            unread: true,
-            type: 'system'
-          });
-        }
-
-        setNotifications(mockNotifications);
-        setUnreadCount(mockNotifications.filter(n => n.unread).length);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-        // Fallback to basic notification
-        setNotifications([{
-          id: 'error',
-          title: 'System Notification',
-          desc: 'Welcome to your dashboard',
-          time: '1h ago',
-          unread: false,
-          type: 'system'
-        }]);
-      } finally {
-        setNotificationsLoading(false);
-      }
-    };
-
-    const getRelativeTime = (dateString: string) => {
-      const now = new Date();
-      const date = new Date(dateString);
-      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-      
-      if (diffInMinutes < 1) return 'Just now';
-      if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-      if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-      return `${Math.floor(diffInMinutes / 1440)}d ago`;
-    };
-
-    fetchUserData();
+    // Initialize notifications with mock data
+    setNotifications(mockNotifications);
+    setUnreadCount(mockNotifications.filter(n => n.unread).length);
 
     // Handle scroll effect
     const handleScroll = () => {
@@ -178,7 +84,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
       window.removeEventListener('scroll', handleScroll);
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [router]);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');

@@ -41,63 +41,91 @@ export default function CollectPage() {
     sortBy: 'newest'
   });
 
-  // Fetch user's NFT collection from API
-  const fetchUserNFTs = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token is invalid or expired, clear storage and redirect to login
-          localStorage.removeItem('token');
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
-          localStorage.removeItem('isAuthenticated');
-          window.location.href = '/auth/login';
-          return;
-        }
-        throw new Error('Failed to fetch user data');
-      }
-
-      const userData = await response.json();
-      
-      // Transform user's NFTs to match component interface
-      const userNFTs = userData.nfts?.map((nft: any) => ({
-        id: nft.id,
-        name: nft.title,
-        image: nft.image,
-        price: parseFloat(nft.price || '0'),
-        creator: nft.creator?.username || nft.creator?.walletAddress || 'Unknown',
-        collection: nft.collection?.name || 'Uncategorized',
-        category: nft.category || 'Art',
-        rarity: nft.rarity || 'Common',
-        tokenId: nft.tokenId,
-        contractAddress: nft.contractAddress,
-        description: nft.description,
-        attributes: nft.attributes,
-      })) || [];
-
-      setNfts(userNFTs);
-      setFilteredNfts(userNFTs);
-    } catch (error) {
-      console.error('Error fetching NFTs:', error);
-      setError('Failed to load your NFT collection');
-    } finally {
-      setIsLoading(false);
+  // Mock NFT collection data
+  const mockNFTs: NFT[] = [
+    {
+      id: '1',
+      name: 'Digital Art #001',
+      image: '/placeholder-nft.jpg',
+      price: 2.5,
+      creator: 'ArtistOne',
+      collection: 'Digital Dreams',
+      category: 'Art',
+      rarity: 'Rare',
+      tokenId: '1001',
+      contractAddress: '0x1234567890abcdef1234567890abcdef12345678',
+      description: 'A beautiful piece of digital art',
+      attributes: [
+        { trait_type: 'Color', value: 'Blue' },
+        { trait_type: 'Style', value: 'Abstract' }
+      ]
+    },
+    {
+      id: '2',
+      name: 'Crypto Punk #123',
+      image: '/placeholder-nft.jpg',
+      price: 5.0,
+      creator: 'PunkMaster',
+      collection: 'Crypto Punks',
+      category: 'Collectibles',
+      rarity: 'Legendary',
+      tokenId: '123',
+      contractAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
+      description: 'A rare crypto punk with unique attributes',
+      attributes: [
+        { trait_type: 'Type', value: 'Alien' },
+        { trait_type: 'Accessory', value: 'Sunglasses' }
+      ]
+    },
+    {
+      id: '3',
+      name: 'Nature Photo #456',
+      image: '/placeholder-nft.jpg',
+      price: 1.2,
+      creator: 'NaturePhotographer',
+      collection: 'Natural Wonders',
+      category: 'Photography',
+      rarity: 'Common',
+      tokenId: '456',
+      contractAddress: '0x567890abcdef1234567890abcdef1234567890ab',
+      description: 'Stunning nature photography',
+      attributes: [
+        { trait_type: 'Location', value: 'Mountains' },
+        { trait_type: 'Season', value: 'Spring' }
+      ]
+    },
+    {
+      id: '4',
+      name: 'Abstract NFT #789',
+      image: '/placeholder-nft.jpg',
+      price: 3.8,
+      creator: 'AbstractArtist',
+      collection: 'Abstract Collection',
+      category: 'Art',
+      rarity: 'Epic',
+      tokenId: '789',
+      contractAddress: '0x890abcdef1234567890abcdef1234567890abcdef',
+      description: 'Modern abstract digital art',
+      attributes: [
+        { trait_type: 'Pattern', value: 'Geometric' },
+        { trait_type: 'Complexity', value: 'High' }
+      ]
     }
+  ];
+
+  // Initialize with mock data
+  const initializeMockNFTs = () => {
+    setIsLoading(true);
+    // Simulate loading delay
+    setTimeout(() => {
+      setNfts(mockNFTs);
+      setFilteredNfts(mockNFTs);
+      setIsLoading(false);
+    }, 500);
   };
 
   useEffect(() => {
-    fetchUserNFTs();
+    initializeMockNFTs();
   }, []);
 
   // Filter and search logic

@@ -48,52 +48,98 @@ export default function AdminUsersPage() {
   });
   const router = useRouter();
 
-  const fetchUsers = async (page = 1) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/auth/login');
-        return;
-      }
-
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '20',
-        search: filters.search,
-        role: filters.role !== 'all' ? filters.role : '',
-        verified: filters.verified !== 'all' ? filters.verified : '',
-        active: filters.active !== 'all' ? filters.active : '',
-        sortBy: filters.sortBy,
-        sortOrder: filters.sortOrder
-      });
-
-      const response = await fetch(`/api/users?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 403) {
-          throw new Error('Access denied. Admin privileges required.');
-        }
-        throw new Error('Failed to fetch users');
-      }
-
-      const data = await response.json();
-      setUsers(data.users);
-      setFilteredUsers(data.users);
-      setTotalPages(Math.ceil(data.total / 20));
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load users');
-    } finally {
-      setIsLoading(false);
+  // Mock users data
+  const mockUsers: User[] = [
+    {
+      id: '1',
+      email: 'john.doe@example.com',
+      username: 'johndoe',
+      firstName: 'John',
+      lastName: 'Doe',
+      role: 'USER',
+      isVerified: true,
+      isActive: true,
+      createdAt: '2024-01-15T10:30:00Z',
+      lastLogin: '2024-01-20T14:22:00Z',
+      nftCount: 5,
+      transactionCount: 12,
+      totalSpent: 2450.75
+    },
+    {
+      id: '2',
+      email: 'jane.smith@example.com',
+      username: 'janesmith',
+      firstName: 'Jane',
+      lastName: 'Smith',
+      role: 'ADMIN',
+      isVerified: true,
+      isActive: true,
+      createdAt: '2024-01-10T08:15:00Z',
+      lastLogin: '2024-01-21T09:45:00Z',
+      nftCount: 15,
+      transactionCount: 28,
+      totalSpent: 8920.50
+    },
+    {
+      id: '3',
+      email: 'bob.wilson@example.com',
+      username: 'bobwilson',
+      firstName: 'Bob',
+      lastName: 'Wilson',
+      role: 'USER',
+      isVerified: false,
+      isActive: true,
+      createdAt: '2024-01-18T16:45:00Z',
+      lastLogin: '2024-01-19T11:30:00Z',
+      nftCount: 2,
+      transactionCount: 3,
+      totalSpent: 450.25
+    },
+    {
+      id: '4',
+      email: 'alice.brown@example.com',
+      username: 'alicebrown',
+      firstName: 'Alice',
+      lastName: 'Brown',
+      role: 'USER',
+      isVerified: true,
+      isActive: false,
+      createdAt: '2024-01-12T12:20:00Z',
+      lastLogin: '2024-01-17T15:10:00Z',
+      nftCount: 8,
+      transactionCount: 18,
+      totalSpent: 3250.80
+    },
+    {
+      id: '5',
+      email: 'charlie.davis@example.com',
+      username: 'charliedavis',
+      firstName: 'Charlie',
+      lastName: 'Davis',
+      role: 'USER',
+      isVerified: true,
+      isActive: true,
+      createdAt: '2024-01-20T09:00:00Z',
+      lastLogin: '2024-01-21T13:25:00Z',
+      nftCount: 3,
+      transactionCount: 7,
+      totalSpent: 1125.40
     }
+  ];
+
+  const initializeMockUsers = () => {
+    setIsLoading(true);
+    // Simulate loading delay
+    setTimeout(() => {
+      setUsers(mockUsers);
+      setFilteredUsers(mockUsers);
+      setTotalPages(1); // Since we have a small mock dataset
+      setIsLoading(false);
+    }, 500);
   };
 
   useEffect(() => {
-    fetchUsers(currentPage);
+    initializeMockUsers();
   }, [currentPage, filters, router]);
 
   const handleFilterChange = (key: keyof UserFilters, value: string) => {
@@ -102,29 +148,57 @@ export default function AdminUsersPage() {
   };
 
   const handleUserAction = async (userId: string, action: 'activate' | 'deactivate' | 'verify' | 'unverify' | 'promote' | 'demote') => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update user');
-      }
-
-      // Refresh users list
-      fetchUsers(currentPage);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      alert('Failed to update user');
-    }
+    // Simulate user action with mock functionality
+    setTimeout(() => {
+      setUsers(prevUsers => 
+        prevUsers.map(user => {
+          if (user.id === userId) {
+            switch (action) {
+              case 'activate':
+                return { ...user, isActive: true };
+              case 'deactivate':
+                return { ...user, isActive: false };
+              case 'verify':
+                return { ...user, isVerified: true };
+              case 'unverify':
+                return { ...user, isVerified: false };
+              case 'promote':
+                return { ...user, role: 'ADMIN' as const };
+              case 'demote':
+                return { ...user, role: 'USER' as const };
+              default:
+                return user;
+            }
+          }
+          return user;
+        })
+      );
+      
+      // Update filtered users as well
+      setFilteredUsers(prevUsers => 
+        prevUsers.map(user => {
+          if (user.id === userId) {
+            switch (action) {
+              case 'activate':
+                return { ...user, isActive: true };
+              case 'deactivate':
+                return { ...user, isActive: false };
+              case 'verify':
+                return { ...user, isVerified: true };
+              case 'unverify':
+                return { ...user, isVerified: false };
+              case 'promote':
+                return { ...user, role: 'ADMIN' as const };
+              case 'demote':
+                return { ...user, role: 'USER' as const };
+              default:
+                return user;
+            }
+          }
+          return user;
+        })
+      );
+    }, 500);
   };
 
   const handleBulkAction = async (action: 'activate' | 'deactivate' | 'verify' | 'delete') => {
@@ -133,33 +207,38 @@ export default function AdminUsersPage() {
     const confirmed = confirm(`Are you sure you want to ${action} ${selectedUsers.size} user(s)?`);
     if (!confirmed) return;
 
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch('/api/users/bulk', {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userIds: Array.from(selectedUsers),
-          action
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to perform bulk action');
+    // Simulate bulk action with mock functionality
+    setTimeout(() => {
+      const userIds = Array.from(selectedUsers);
+      
+      if (action === 'delete') {
+        // Remove users from both arrays
+        setUsers(prevUsers => prevUsers.filter(user => !userIds.includes(user.id)));
+        setFilteredUsers(prevUsers => prevUsers.filter(user => !userIds.includes(user.id)));
+      } else {
+        // Update users based on action
+        const updateUser = (user: User) => {
+          if (!userIds.includes(user.id)) return user;
+          
+          switch (action) {
+            case 'activate':
+              return { ...user, isActive: true };
+            case 'deactivate':
+              return { ...user, isActive: false };
+            case 'verify':
+              return { ...user, isVerified: true };
+            default:
+              return user;
+          }
+        };
+        
+        setUsers(prevUsers => prevUsers.map(updateUser));
+        setFilteredUsers(prevUsers => prevUsers.map(updateUser));
       }
-
+      
       setSelectedUsers(new Set());
       setShowBulkActions(false);
-      fetchUsers(currentPage);
-    } catch (error) {
-      console.error('Error performing bulk action:', error);
-      alert('Failed to perform bulk action');
-    }
+    }, 1000);
   };
 
   const toggleUserSelection = (userId: string) => {

@@ -67,39 +67,72 @@ export default function AdminSettingsPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const router = useRouter();
 
-  const fetchSettings = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/auth/login');
-        return;
-      }
+  // Mock system settings data
+  const mockSettings: SystemSettings = {
+    platform: {
+      name: 'NFT Marketplace',
+      description: 'A premium NFT trading platform',
+      logoUrl: '/logo.png',
+      faviconUrl: '/favicon.ico',
+      supportEmail: 'support@nftmarketplace.com',
+      maintenanceMode: false,
+      registrationEnabled: true,
+      emailVerificationRequired: true,
+    },
+    fees: {
+      transactionFee: 2.5,
+      listingFee: 0.1,
+      auctionFee: 3.0,
+      withdrawalFee: 0.5,
+      minimumWithdrawal: 10,
+      maximumWithdrawal: 10000,
+    },
+    limits: {
+      maxFileSize: 50,
+      maxNftsPerUser: 1000,
+      maxAuctionsPerUser: 50,
+      maxBidsPerAuction: 100,
+      auctionDurationMin: 1,
+      auctionDurationMax: 30,
+    },
+    security: {
+      passwordMinLength: 8,
+      sessionTimeout: 3600,
+      maxLoginAttempts: 5,
+      lockoutDuration: 900,
+      twoFactorRequired: false,
+      ipWhitelist: ['127.0.0.1', '192.168.1.0/24'],
+    },
+    notifications: {
+      emailEnabled: true,
+      smsEnabled: false,
+      pushEnabled: true,
+      adminAlerts: true,
+      userWelcomeEmail: true,
+      transactionEmails: true,
+    },
+    integrations: {
+      stripeEnabled: true,
+      stripePublicKey: 'pk_test_...',
+      stripeSecretKey: 'sk_test_...',
+      ipfsEnabled: true,
+      ipfsGateway: 'https://ipfs.io/ipfs/',
+      blockchainNetwork: 'ethereum',
+      contractAddress: '0x1234567890abcdef1234567890abcdef12345678',
+    },
+  };
 
-      const response = await fetch('/api/admin/settings', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 403) {
-          throw new Error('Access denied. Admin privileges required.');
-        }
-        throw new Error('Failed to fetch settings');
-      }
-
-      const data = await response.json();
-      setSettings(data);
-    } catch (error) {
-      console.error('Error fetching settings:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load settings');
-    } finally {
+  const initializeMockSettings = () => {
+    setIsLoading(true);
+    // Simulate loading delay
+    setTimeout(() => {
+      setSettings(mockSettings);
       setIsLoading(false);
-    }
+    }, 500);
   };
 
   useEffect(() => {
-    fetchSettings();
+    initializeMockSettings();
   }, [router]);
 
   const handleSettingChange = (category: keyof SystemSettings, key: string, value: any) => {
@@ -168,59 +201,24 @@ export default function AdminSettingsPage() {
     if (!settings) return;
 
     setIsSaving(true);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch('/api/admin/settings', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settings),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save settings');
-      }
-
+    // Simulate saving delay
+    setTimeout(() => {
       setHasChanges(false);
       alert('Settings saved successfully!');
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      alert('Failed to save settings');
-    } finally {
       setIsSaving(false);
-    }
+    }, 1000);
   };
 
   const resetSettings = async () => {
     const confirmed = confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.');
     if (!confirmed) return;
 
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch('/api/admin/settings/reset', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to reset settings');
-      }
-
-      fetchSettings();
+    // Simulate reset delay
+    setTimeout(() => {
+      setSettings(mockSettings);
       setHasChanges(false);
       alert('Settings reset to defaults successfully!');
-    } catch (error) {
-      console.error('Error resetting settings:', error);
-      alert('Failed to reset settings');
-    }
+    }, 1000);
   };
 
   const tabs = [

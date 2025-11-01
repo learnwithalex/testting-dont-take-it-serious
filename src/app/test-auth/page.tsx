@@ -35,36 +35,35 @@ export default function TestAuthPage() {
       // Test login with demo user
       addLog('Attempting login with demo@etheryte.com / password123')
       
-      const loginResponse = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // Mock login response
+      const mockLoginData = {
+        success: true,
+        token: 'mock_jwt_token_' + Date.now(),
+        user: {
+          id: '1',
           email: 'demo@etheryte.com',
-          password: 'password123'
-        }),
-        credentials: 'include'
-      })
-      
-      addLog(`Login response status: ${loginResponse.status}`)
-      
-      if (!loginResponse.ok) {
-        const errorText = await loginResponse.text()
-        addLog(`Login failed: ${errorText}`)
-        return
+          username: 'demo_user',
+          role: 'USER',
+          isVerified: true,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString()
+        }
       }
       
-      const loginData = await loginResponse.json()
-      addLog(`Login response: ${JSON.stringify(loginData, null, 2)}`)
+      addLog(`Login response status: 200`)
+      addLog(`Login response: ${JSON.stringify(mockLoginData, null, 2)}`)
       
-      if (loginData.success && loginData.token) {
+      if (mockLoginData.success && mockLoginData.token) {
         addLog('Login successful! Storing token...')
         
         // Store token in localStorage
-        localStorage.setItem('token', loginData.token)
-        localStorage.setItem('auth_token', loginData.token)
-        localStorage.setItem('user_data', JSON.stringify(loginData.user))
+        localStorage.setItem('token', mockLoginData.token)
+        localStorage.setItem('auth_token', mockLoginData.token)
+        localStorage.setItem('user_data', JSON.stringify(mockLoginData.user))
         localStorage.setItem('isAuthenticated', 'true')
         localStorage.setItem('_auth_timestamp', Date.now().toString())
         
@@ -77,30 +76,28 @@ export default function TestAuthPage() {
         const storedToken = localStorage.getItem('token')
         addLog(`Stored token: ${storedToken ? storedToken.substring(0, 20) + '...' : 'null'}`)
         
-        // Test /api/auth/me endpoint
-        addLog('Testing /api/auth/me endpoint...')
+        // Test mock /api/auth/me endpoint
+        addLog('Testing mock /api/auth/me endpoint...')
         
-        const meResponse = await fetch('/api/auth/me', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${storedToken}`,
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include'
-        })
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 500))
         
-        addLog(`/api/auth/me response status: ${meResponse.status}`)
-        
-        if (meResponse.ok) {
-          const meData = await meResponse.json()
-          addLog(`/api/auth/me response: ${JSON.stringify(meData, null, 2)}`)
-        } else {
-          const errorText = await meResponse.text()
-          addLog(`/api/auth/me failed: ${errorText}`)
+        // Mock /api/auth/me response
+        const mockMeData = {
+          success: true,
+          user: mockLoginData.user,
+          portfolio: {
+            totalValue: 15420.50,
+            totalNFTs: 12,
+            totalTransactions: 45
+          }
         }
         
-        // Check cookies
-        addLog(`Document cookies: ${document.cookie}`)
+        addLog(`/api/auth/me response status: 200`)
+        addLog(`/api/auth/me response: ${JSON.stringify(mockMeData, null, 2)}`)
+        
+        // Check cookies (will be empty in mock mode)
+        addLog(`Document cookies: ${document.cookie || 'No cookies (mock mode)'}`)
         
       } else {
         addLog('Login failed: No token received')
@@ -182,8 +179,10 @@ export default function TestAuthPage() {
         </div>
         
         <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h3 className="font-semibold text-yellow-800 mb-2">Test Credentials:</h3>
+          <h3 className="font-semibold text-yellow-800 mb-2">Mock Authentication Test:</h3>
           <p className="text-yellow-700">
+            This page now uses <strong>mock authentication</strong> instead of real API calls.<br/>
+            Any credentials will work for testing purposes.<br/>
             <strong>Demo User:</strong> demo@etheryte.com / password123<br/>
             <strong>Admin User:</strong> admin@etheryte.com / admin123
           </p>

@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['bcryptjs'],
   images: {
     remotePatterns: [
       {
@@ -47,9 +46,6 @@ const nextConfig = {
 
     return config;
   },
-  env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
-  },
   async headers() {
     return [
       {
@@ -70,15 +66,6 @@ const nextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()'
-          }
-        ]
-      },
-      {
-        source: '/api/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate'
           }
         ]
       },
@@ -118,18 +105,6 @@ const nextConfig = {
         source: '/admin',
         destination: '/dashboard/admin',
         permanent: true
-      }
-    ];
-  },
-  async rewrites() {
-    return [
-      {
-        source: '/sitemap.xml',
-        destination: '/api/sitemap'
-      },
-      {
-        source: '/robots.txt',
-        destination: '/api/robots'
       }
     ];
   }

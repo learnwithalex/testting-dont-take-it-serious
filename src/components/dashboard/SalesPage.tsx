@@ -24,46 +24,77 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch sales data from API
+  // Mock sales data
+  const mockSales: Sale[] = [
+    {
+      id: '1',
+      nftName: 'Digital Art #001',
+      nftImage: '/placeholder-nft.jpg',
+      buyer: '0x1234...5678',
+      salePrice: '2.5 ETH',
+      date: new Date(Date.now() - 86400000).toLocaleString(),
+      status: 'completed',
+      royalty: '0.25 ETH',
+      transactionHash: '0x1234567890abcdef1234567890abcdef12345678'
+    },
+    {
+      id: '2',
+      nftName: 'Crypto Punk #123',
+      nftImage: '/placeholder-nft.jpg',
+      buyer: '0xabcd...efgh',
+      salePrice: '5.0 ETH',
+      date: new Date(Date.now() - 172800000).toLocaleString(),
+      status: 'completed',
+      royalty: '0.5 ETH',
+      transactionHash: '0xabcdef1234567890abcdef1234567890abcdef12'
+    },
+    {
+      id: '3',
+      nftName: 'Abstract NFT #456',
+      nftImage: '/placeholder-nft.jpg',
+      buyer: '0x9876...4321',
+      salePrice: '1.8 ETH',
+      date: new Date(Date.now() - 259200000).toLocaleString(),
+      status: 'pending',
+      royalty: '0.18 ETH',
+      transactionHash: '0x567890abcdef1234567890abcdef1234567890ab'
+    },
+    {
+      id: '4',
+      nftName: 'Pixel Art Collection #789',
+      nftImage: '/placeholder-nft.jpg',
+      buyer: '0xfedc...ba98',
+      salePrice: '3.2 ETH',
+      date: new Date(Date.now() - 345600000).toLocaleString(),
+      status: 'completed',
+      royalty: '0.32 ETH',
+      transactionHash: '0x890abcdef1234567890abcdef1234567890abcdef'
+    },
+    {
+      id: '5',
+      nftName: 'Nature Photography #012',
+      nftImage: '/placeholder-nft.jpg',
+      buyer: '0x2468...1357',
+      salePrice: '0.8 ETH',
+      date: new Date(Date.now() - 432000000).toLocaleString(),
+      status: 'cancelled',
+      royalty: '0.08 ETH',
+      transactionHash: '0xdef1234567890abcdef1234567890abcdef123456'
+    }
+  ];
+
+  // Initialize with mock data
   useEffect(() => {
-    const fetchSales = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/transactions?type=SALE', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch sales data');
-        }
-
-        const data = await response.json();
-        
-        // Transform API data to match component interface
-        const transformedSales: Sale[] = data.transactions.map((transaction: any) => ({
-          id: transaction.id,
-          nftName: transaction.nft.name,
-          nftImage: transaction.nft.image,
-          buyer: `${transaction.buyer.walletAddress?.slice(0, 6)}...${transaction.buyer.walletAddress?.slice(-4)}` || transaction.buyer.name,
-          salePrice: `${transaction.amount} ETH`,
-          date: new Date(transaction.createdAt).toLocaleString(),
-          status: transaction.status?.toLowerCase() || 'completed',
-          royalty: `${(transaction.amount * 0.1).toFixed(3)} ETH`, // 10% royalty assumption
-          transactionHash: transaction.transactionHash || `0x${Math.random().toString(16).substr(2, 64)}`
-        }));
-
-        setSales(transformedSales);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch sales data');
-        console.error('Error fetching sales:', err);
-      } finally {
+    const initializeSales = () => {
+      setLoading(true);
+      // Simulate loading delay
+      setTimeout(() => {
+        setSales(mockSales);
         setLoading(false);
-      }
+      }, 500);
     };
 
-    fetchSales();
+    initializeSales();
   }, []);
 
   const filteredSales = sales.filter(sale => {

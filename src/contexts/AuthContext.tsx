@@ -2,7 +2,74 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { apiService, User, AuthResult } from '@/lib/api-service'
+import { User, AuthResponse } from '@/types/auth'
+
+// Mock user data for frontend-only functionality
+const mockUser: User = {
+  id: '1',
+  email: 'demo@example.com',
+  username: 'demo',
+  avatar: '/avatars/demo.jpg',
+  createdAt: new Date('2024-01-01'),
+  updatedAt: new Date('2024-01-01')
+}
+
+// Mock API service for frontend-only functionality
+const mockApiService = {
+  async getMe(): Promise<AuthResponse> {
+    await new Promise(resolve => setTimeout(resolve, 500)) // Simulate network delay
+    const isLoggedIn = localStorage.getItem('isAuthenticated') === 'true'
+    if (isLoggedIn) {
+      return { success: true, user: mockUser, message: 'User retrieved successfully' }
+    }
+    return { success: false, error: 'Unauthorized', message: 'User not authenticated' }
+  },
+
+  async login(emailOrUsername: string, password: string, rememberMe = false): Promise<AuthResponse> {
+    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate network delay
+    
+    // Simple mock validation
+    if ((emailOrUsername === 'demo@example.com' || emailOrUsername === 'demo') && password === 'password') {
+      localStorage.setItem('isAuthenticated', 'true')
+      localStorage.setItem('user_data', JSON.stringify(mockUser))
+      return { success: true, user: mockUser, token: 'mock-token', message: 'Login successful' }
+    }
+    
+    return { success: false, error: 'Invalid credentials', message: 'Invalid email/username or password' }
+  },
+
+  async register(userData: any): Promise<AuthResponse> {
+    await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate network delay
+    
+    // Simple mock registration
+    const newUser = {
+      ...mockUser,
+      email: userData.email,
+      username: userData.username,
+      id: Math.random().toString(36).substr(2, 9)
+    }
+    
+    localStorage.setItem('isAuthenticated', 'true')
+    localStorage.setItem('user_data', JSON.stringify(newUser))
+    return { success: true, user: newUser, token: 'mock-token', message: 'Registration successful' }
+  },
+
+  async logout(): Promise<AuthResponse> {
+    await new Promise(resolve => setTimeout(resolve, 300)) // Simulate network delay
+    localStorage.removeItem('isAuthenticated')
+    localStorage.removeItem('user_data')
+    return { success: true, message: 'Logout successful' }
+  },
+
+  async refreshToken(): Promise<AuthResponse> {
+    await new Promise(resolve => setTimeout(resolve, 500)) // Simulate network delay
+    const isLoggedIn = localStorage.getItem('isAuthenticated') === 'true'
+    if (isLoggedIn) {
+      return { success: true, user: mockUser, token: 'new-mock-token', message: 'Token refreshed successfully' }
+    }
+    return { success: false, error: 'Unauthorized', message: 'Cannot refresh token' }
+  }
+}
 
 interface AuthContextType {
   user: User | null
@@ -82,10 +149,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const checkAuth = useCallback(async () => {
 
     try {
-      const meResult = await apiService.getMe()
-      if (meResult.success && meResult.data?.user) {
+      const meResult = await mockApiService.getMe()
+      if (meResult.success && meResult.user) {
         if (isMountedRef.current) {
-          setUser(meResult.data.user)
+          setUser(meResult.user)
         }
         return
       } else if (meResult.error === 'Unauthorized') {
@@ -95,10 +162,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         
         try {
-          const refreshResult = await apiService.refreshToken()
-          if (refreshResult.success && refreshResult.data?.user) {
+          const refreshResult = await mockApiService.refreshToken()
+          if (refreshResult.success && refreshResult.user) {
             if (isMountedRef.current) {
-              setUser(refreshResult.data.user)
+              setUser(refreshResult.user)
             }
             return
           }
@@ -119,10 +186,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Network error: small backoff and retry once
       try {
         await new Promise(r => setTimeout(r, 250))
-        const retryResult = await apiService.getMe()
-        if (retryResult.success && retryResult.data?.user) {
+        const retryResult = await mockApiService.getMe()
+        if (retryResult.success && retryResult.user) {
           if (isMountedRef.current) {
-            setUser(retryResult.data.user)
+            setUser(retryResult.user)
           }
         } else {
           clearAuthData()
@@ -154,11 +221,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true)
     }
     try {
-      const result = await apiService.login(emailOrUsername, password, rememberMe)
+      const result = await mockApiService.login(emailOrUsername, password, rememberMe)
 
-      if (result.success && result.data?.user) {
+      if (result.success && result.user) {
         if (isMountedRef.current) {
-          setUser(result.data.user)
+          setUser(result.user)
         }
         router.push('/dashboard')
       } else {
@@ -184,13 +251,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true)
     }
     try {
-      const result = await apiService.register(userData)
+      const result = await mockApiService.register(userData)
 
-      if (result.success && result.data?.user) {
+      if (result.success && result.user) {
         if (isMountedRef.current) {
-          setUser(result.data.user)
+          setUser(result.user)
         }
-        return { success: true, user: result.data.user }
+        return { success: true, user: result.user }
       } else {
         const errorMessage = result.error || result.message || 'Signup failed'
         return { success: false, error: errorMessage }
@@ -208,7 +275,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = useCallback(async () => {
     try {
-      await apiService.logout()
+      await mockApiService.logout()
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
@@ -227,29 +294,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     try {
       // Try to get current user
-      const result = await apiService.getMe()
+      const result = await mockApiService.getMe()
       
-      if (result.success && result.data?.user) {
+      if (result.success && result.user) {
         if (isMountedRef.current) {
-          setUser(result.data.user)
+          setUser(result.user)
         }
         return
       }
       
       // If getMe failed, try to refresh token
-      if (result.code === 'UNAUTHORIZED' || result.code === 'SESSION_EXPIRED') {
+      if (result.error === 'Unauthorized') {
         if (process.env.NODE_ENV === 'development') {
           console.log('Access token expired, attempting refresh...')
         }
         
-        const refreshResult = await apiService.refreshToken()
+        const refreshResult = await mockApiService.refreshToken()
         
-        if (refreshResult.success && refreshResult.data?.user) {
+        if (refreshResult.success && refreshResult.user) {
           if (process.env.NODE_ENV === 'development') {
             console.log('Token refresh successful')
           }
           if (isMountedRef.current) {
-            setUser(refreshResult.data.user)
+            setUser(refreshResult.user)
           }
           return
         } else {

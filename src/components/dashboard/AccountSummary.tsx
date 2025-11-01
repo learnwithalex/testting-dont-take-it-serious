@@ -26,60 +26,53 @@ export default function AccountSummary() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  // Mock data for account summary
+  const mockCoins: Coin[] = [
+    {
+      symbol: 'ETH',
+      name: 'Ethereum',
+      amount: 2.5,
+      value: 8641.95,
+      change: 3.2
+    },
+    {
+      symbol: 'BTC',
+      name: 'Bitcoin',
+      amount: 0.15,
+      value: 10183.52,
+      change: -1.8
+    },
+    {
+      symbol: 'USDC',
+      name: 'USD Coin',
+      amount: 1250.0,
+      value: 1250.0,
+      change: 0.1
+    }
+  ];
+
+  const mockStats: PortfolioStats = {
+    totalNFTs: 12,
+    totalSales: 8,
+    activeListings: 3
+  };
+
+  const mockBalance = mockCoins.reduce((sum, coin) => sum + coin.value, 0);
+
+  // Initialize with mock data
+  const initializeMockData = () => {
+    setIsLoading(true);
+    // Simulate loading delay
+    setTimeout(() => {
+      setCoins(mockCoins);
+      setBalance(mockBalance);
+      setStats(mockStats);
+      setIsLoading(false);
+    }, 500);
+  };
+
   useEffect(() => {
-    const loadAccountData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          router.push('/auth/login');
-          return;
-        }
-
-        // Fetch user data with portfolio information
-        const response = await fetch('/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            // Token is invalid or expired, clear storage and redirect to login
-            localStorage.removeItem('token');
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('user_data');
-            localStorage.removeItem('isAuthenticated');
-            router.push('/auth/login');
-            return;
-          }
-          throw new Error('Failed to fetch user data');
-        }
-
-        const userData = await response.json();
-        
-        // Calculate portfolio stats from user data
-        const portfolioStats = {
-          totalNFTs: userData.nfts?.length || 0,
-          totalSales: userData.transactions?.filter((tx: any) => tx.type === 'SALE').length || 0,
-          activeListings: userData.nfts?.filter((nft: any) => nft.isListed).length || 0,
-        };
-
-        // Calculate crypto holdings from transactions
-        const cryptoHoldings = calculateCryptoHoldings(userData.transactions || []);
-        const totalBalance = cryptoHoldings.reduce((sum, holding) => sum + holding.value, 0);
-
-        setCoins(cryptoHoldings);
-        setBalance(totalBalance);
-        setStats(portfolioStats);
-      } catch (error) {
-        console.error('Error loading account data:', error);
-        setError('Failed to load account data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadAccountData();
+    initializeMockData();
   }, [router]);
 
   // Calculate crypto holdings from transaction history

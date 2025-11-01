@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiService } from '@/lib/api-service';
 
 interface DashboardStats {
   users: {
@@ -76,36 +75,110 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+  const { user, hasRole } = useAuth();
+
+  // Mock admin dashboard data
+  const mockAdminData = {
+    stats: {
+      users: {
+        total: 15420,
+        verified: 12340,
+        unverified: 3080,
+        admins: 12,
+        newToday: 45,
+        activeToday: 1250
+      },
+      nfts: {
+        total: 89650,
+        listed: 23400,
+        sold: 18900,
+        minted: 450,
+        totalVolume: 2450000,
+        averagePrice: 0.85
+      },
+      transactions: {
+        total: 156780,
+        today: 234,
+        volume: 45600,
+        pending: 12,
+        completed: 156750,
+        failed: 18
+      },
+      auctions: {
+        active: 89,
+        completed: 1240,
+        totalBids: 5670,
+        highestBid: 125.5
+      },
+      collections: {
+        total: 2340,
+        verified: 890,
+        totalItems: 89650,
+        topCollection: "CryptoPunks"
+      },
+      system: {
+        uptime: "99.9%",
+        lastBackup: "2024-01-15 03:00:00",
+        databaseSize: "2.4 GB",
+        activeConnections: 145
+      }
+    },
+    recentActivity: [
+      {
+        id: "1",
+        type: "user_registration" as const,
+        description: "New user registered: alice_crypto",
+        timestamp: new Date(Date.now() - 300000).toISOString(),
+        user: "alice_crypto"
+      },
+      {
+        id: "2", 
+        type: "nft_mint" as const,
+        description: "NFT minted: Digital Art #1234",
+        timestamp: new Date(Date.now() - 600000).toISOString(),
+        user: "artist_bob"
+      },
+      {
+        id: "3",
+        type: "transaction" as const,
+        description: "Sale completed: 2.5 ETH",
+        timestamp: new Date(Date.now() - 900000).toISOString(),
+        amount: 2.5
+      }
+    ],
+    topPerformers: [
+      {
+        id: "1",
+        name: "CryptoPunks",
+        type: "collection" as const,
+        value: 125000,
+        metric: "Volume (ETH)"
+      },
+      {
+        id: "2",
+        name: "alice_crypto",
+        type: "user" as const,
+        value: 45,
+        metric: "NFTs Sold"
+      }
+    ]
+  };
 
   const fetchDashboardData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/auth/login');
+      // Check if user is admin
+      if (!user || !hasRole('admin')) {
+        setError('Access denied. Admin privileges required.');
         return;
       }
 
-      const result = await apiService.getAdminDashboard();
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (result.success) {
-        setStats(result.data.stats);
-        setRecentActivity(result.data.recentActivity);
-        setTopPerformers(result.data.topPerformers);
-      } else {
-        if (result.error === 'Unauthorized') {
-          // Token is invalid or expired, clear storage and redirect to login
-          localStorage.removeItem('token');
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
-          localStorage.removeItem('isAuthenticated');
-          router.push('/auth/login');
-          return;
-        }
-        if (result.error === 'Access denied. Admin privileges required.') {
-          throw new Error('Access denied. Admin privileges required.');
-        }
-        throw new Error(result.error || 'Failed to fetch dashboard data');
-      }
+      setStats(mockAdminData.stats);
+      setRecentActivity(mockAdminData.recentActivity);
+      setTopPerformers(mockAdminData.topPerformers);
+      setError(null);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setError(error instanceof Error ? error.message : 'Failed to load dashboard');

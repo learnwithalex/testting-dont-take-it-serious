@@ -8,11 +8,11 @@ import Input from '@/components/ui/Input';
 import Checkbox from '@/components/ui/Checkbox';
 import { validateForm, commonRules } from '@/lib/validation';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiService } from '@/lib/api-service';
 import type { SignupCredentials, ValidationErrors } from '@/types/auth';
 
 export default function SignupPage() {
   const router = useRouter();
+  const { signup } = useAuth();
   const [formData, setFormData] = useState<SignupCredentials>({
     email: '',
     password: '',
@@ -73,7 +73,7 @@ export default function SignupPage() {
     }
 
     try {
-      const result = await apiService.register({
+      const result = await signup({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -81,8 +81,8 @@ export default function SignupPage() {
         password: formData.password,
       });
 
-      if (result.success && result.data?.user) {
-        console.log('Registration successful:', result.data.user);
+      if (result.success && result.user) {
+        console.log('Registration successful:', result.user);
         setGeneralError('');
         setFormData({
           firstName: '',
@@ -95,7 +95,7 @@ export default function SignupPage() {
         });
         router.push('/dashboard');
       } else {
-        setGeneralError(result.error || result.message || 'Registration failed');
+        setGeneralError(result.error || 'Registration failed');
       }
     } catch (error) {
       console.error('Signup error:', error);

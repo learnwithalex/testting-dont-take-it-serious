@@ -48,15 +48,11 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      // Use auth service for password reset
-      const authServiceModule = await import('../../../lib/auth-service');
-      const response = await authServiceModule.authService.resetPassword(formData.email);
-
-      if (response.success) {
-        setIsSuccess(true);
-      } else {
-        setGeneralError(response.message || 'Failed to send reset email');
-      }
+      // Dummy frontend implementation - simulate password reset
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      
+      // Always show success for demo purposes
+      setIsSuccess(true);
     } catch (error) {
       console.error('Reset password error:', error);
       setGeneralError('An unexpected error occurred. Please try again.');
