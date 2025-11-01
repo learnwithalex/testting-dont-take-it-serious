@@ -45,15 +45,8 @@ export const logDebug = (message: string, meta?: any) => {
 // Admin log function for tracking admin actions
 export const logAdminAction = async (action: string, details?: string, ipAddress?: string, userAgent?: string) => {
   try {
-    const prisma = (await import('./prisma')).default;
-    await prisma.adminLog.create({
-      data: {
-        action,
-        details,
-        ipAddress,
-        userAgent,
-      },
-    });
+    // Database logging disabled - using hosted backend
+    // TODO: Implement admin logging via API call to hosted backend
     logInfo(`Admin action logged: ${action}`, { details, ipAddress });
   } catch (error) {
     logError('Failed to log admin action', error as Error, { action, details });

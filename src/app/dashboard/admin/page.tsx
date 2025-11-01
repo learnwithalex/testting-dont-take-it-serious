@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiService } from '@/lib/api-service';
 
 interface DashboardStats {
   users: {
@@ -83,14 +85,14 @@ export default function AdminDashboard() {
         return;
       }
 
-      const response = await fetch('/api/admin/dashboard', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const result = await apiService.getAdminDashboard();
 
-      if (!response.ok) {
-        if (response.status === 401) {
+      if (result.success) {
+        setStats(result.data.stats);
+        setRecentActivity(result.data.recentActivity);
+        setTopPerformers(result.data.topPerformers);
+      } else {
+        if (result.error === 'Unauthorized') {
           // Token is invalid or expired, clear storage and redirect to login
           localStorage.removeItem('token');
           localStorage.removeItem('auth_token');
@@ -99,16 +101,11 @@ export default function AdminDashboard() {
           router.push('/auth/login');
           return;
         }
-        if (response.status === 403) {
+        if (result.error === 'Access denied. Admin privileges required.') {
           throw new Error('Access denied. Admin privileges required.');
         }
-        throw new Error('Failed to fetch dashboard data');
+        throw new Error(result.error || 'Failed to fetch dashboard data');
       }
-
-      const data = await response.json();
-      setStats(data.stats);
-      setRecentActivity(data.recentActivity);
-      setTopPerformers(data.topPerformers);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setError(error instanceof Error ? error.message : 'Failed to load dashboard');

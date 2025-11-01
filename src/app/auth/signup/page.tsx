@@ -7,6 +7,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Checkbox from '@/components/ui/Checkbox';
 import { validateForm, commonRules } from '@/lib/validation';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiService } from '@/lib/api-service';
 import type { SignupCredentials, ValidationErrors } from '@/types/auth';
 
 export default function SignupPage() {
@@ -71,39 +73,30 @@ export default function SignupPage() {
     }
 
     try {
-      // Call real register API to create account and set JWT cookies
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          username: formData.username,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-        }),
-        credentials: 'include',
+      const result = await apiService.register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        username: formData.username,
+        password: formData.password,
       });
 
-      const payload = await res.json();
-
-      if (!res.ok || !payload.success) {
-        setGeneralError(payload.error || 'Registration failed');
-        setIsLoading(false);
-        return;
+      if (result.success && result.data?.user) {
+        console.log('Registration successful:', result.data.user);
+        setGeneralError('');
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          username: '',
+          password: '',
+          confirmPassword: '',
+          acceptTerms: false,
+        });
+        router.push('/dashboard');
+      } else {
+        setGeneralError(result.error || result.message || 'Registration failed');
       }
-
-      const data = payload.data;
-
-      // Optionally store token client-side for backward compatibility
-      if (data?.tokens?.accessToken) {
-        localStorage.setItem('auth_token', data.tokens.accessToken);
-      }
-
-      // Navigate to dashboard; cookies are set by the server
-      router.push('/dashboard');
     } catch (error) {
       console.error('Signup error:', error);
       setGeneralError('An unexpected error occurred. Please try again.');

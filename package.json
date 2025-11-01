@@ -4,16 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start"
   },
   "dependencies": {
     "@auth/core": "^0.41.1",
     "@heroicons/react": "^2.2.0",
-    "@prisma/client": "^6.11.1",
+
     "@tailwindcss/postcss": "^4.1.16",
     "@types/bcryptjs": "^2.4.6",
-    "@types/pg": "^8.15.5",
     "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
@@ -22,11 +21,9 @@
     "jsonwebtoken": "^9.0.2",
     "next": "^16.0.0",
     "next-sitemap": "^4.2.3",
-    "pg": "^8.16.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "resend": "^6.2.2",
-    "sqlite3": "^5.1.7",
     "tailwind-merge": "^3.3.1",
     "uuid": "^13.0.0",
     "winston": "^3.18.3",
@@ -56,7 +53,6 @@
     "lint-staged": "^15.2.2",
     "postcss": "^8.5.6",
     "prettier": "^3.2.5",
-    "prisma": "^6.11.1",
     "rimraf": "^5.0.5",
     "tailwindcss": "^3.4.18",
     "tsx": "^4.20.6",

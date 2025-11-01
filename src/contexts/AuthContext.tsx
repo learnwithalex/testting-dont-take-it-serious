@@ -2,26 +2,19 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-
-export interface User {
-  id: string
-  email: string
-  username: string
-  firstName?: string
-  lastName?: string
-  avatar?: string
-  role: 'USER' | 'MODERATOR' | 'ADMIN'
-  isActive: boolean
-  isVerified: boolean
-  twoFactorEnabled: boolean
-  createdAt: string
-  lastLoginAt?: string
-}
+import { apiService, User, AuthResult } from '@/lib/api-service'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
   login: (emailOrUsername: string, password: string, rememberMe?: boolean) => Promise<void>
+  signup: (userData: {
+    email: string
+    username: string
+    password: string
+    firstName?: string
+    lastName?: string
+  }) => Promise<{ success: boolean; user?: User; error?: string; message?: string }>
   logout: () => Promise<void>
   refreshAuth: () => Promise<void>
   updateUser: (userData: Partial<User>) => void
@@ -87,132 +80,62 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const checkAuth = useCallback(async () => {
-    const handleMeResponse = async (response: Response, isRetry = false): Promise<boolean> => {
-      if (response.ok) {
-        const payload: ApiResponse = await response.json()
-        const userData = payload?.data?.user || payload?.user
-        if (userData) {
-          if (isMountedRef.current) {
-            setUser(userData)
-          }
-          return true
-        }
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Auth check succeeded but no user data in response')
-        }
-        clearAuthData()
+
+    try {
+      const meResult = await apiService.getMe()
+      if (meResult.success && meResult.data?.user) {
         if (isMountedRef.current) {
-          setUser(null)
+          setUser(meResult.data.user)
         }
-        return false
-      }
-
-      if (response.status === 401) {
-        // Don't try to refresh if this is already a retry after refresh
-        if (isRetry) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Auth check failed after refresh - user needs to login')
-          }
-          clearAuthData()
-          if (isMountedRef.current) {
-            setUser(null)
-          }
-          return false
-        }
-
+        return
+      } else if (meResult.error === 'Unauthorized') {
+        // Try refresh token
         if (process.env.NODE_ENV === 'development') {
           console.log('Received 401, attempting token refresh...')
         }
         
         try {
-          const refreshRes = await fetch('/api/auth/refresh', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-          })
-
-          if (refreshRes.ok) {
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Token refresh successful')
+          const refreshResult = await apiService.refreshToken()
+          if (refreshResult.success && refreshResult.data?.user) {
+            if (isMountedRef.current) {
+              setUser(refreshResult.data.user)
             }
-            // The refresh endpoint should return user data
-            const payload: ApiResponse = await refreshRes.json()
-            const userData = payload?.data?.user || payload?.user
-            if (userData) {
-              if (isMountedRef.current) {
-                setUser(userData)
-              }
-              return true
-            }
-            
-            // Refresh succeeded but no user data, try /me again
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Refresh succeeded, retrying /api/auth/me...')
-            }
-            const retryRes = await fetch('/api/auth/me', {
-              method: 'GET',
-              credentials: 'include',
-            })
-            return handleMeResponse(retryRes, true)
-          } else if (refreshRes.status === 401) {
-            // Refresh token is also invalid/expired - user needs to login
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Refresh token expired - user needs to login')
-            }
-          } else {
-            // Other refresh error
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('Token refresh failed with status:', refreshRes.status)
-            }
+            return
           }
         } catch (e) {
-          // Network error during refresh
           if (process.env.NODE_ENV === 'development') {
-            console.error('Token refresh request failed:', e)
+            console.error('Token refresh failed:', e)
           }
         }
-
-        // If refresh failed or didn't return user data, clear auth
-        clearAuthData()
-        if (isMountedRef.current) {
-          setUser(null)
-        }
-        return false
       }
-
-      // Non-401 errors (500, 403, etc.)
-      console.error('Auth check failed with status:', response.status)
+      
+      // If we get here, auth failed
       clearAuthData()
       if (isMountedRef.current) {
         setUser(null)
       }
-      return false
-    }
-
-    try {
-      const response = await fetch('/api/auth/me', {
-        method: 'GET',
-        credentials: 'include',
-      })
-      const ok = await handleMeResponse(response)
-      if (ok) return
     } catch (error) {
       console.error('Auth check failed:', error)
       // Network error: small backoff and retry once
       try {
         await new Promise(r => setTimeout(r, 250))
-        const retryRes = await fetch('/api/auth/me', { 
-          method: 'GET', 
-          credentials: 'include' 
-        })
-        const ok = await handleMeResponse(retryRes)
-        if (ok) return
-      } catch (e2) {
-        console.error('Auth retry failed:', e2)
-      }
-      clearAuthData()
-      if (isMountedRef.current) {
-        setUser(null)
+        const retryResult = await apiService.getMe()
+        if (retryResult.success && retryResult.data?.user) {
+          if (isMountedRef.current) {
+            setUser(retryResult.data.user)
+          }
+        } else {
+          clearAuthData()
+          if (isMountedRef.current) {
+            setUser(null)
+          }
+        }
+      } catch (retryError) {
+        console.error('Auth check retry failed:', retryError)
+        clearAuthData()
+        if (isMountedRef.current) {
+          setUser(null)
+        }
       }
     } finally {
       if (isMountedRef.current) {
@@ -231,33 +154,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(true)
     }
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          emailOrUsername,
-          password,
-          rememberMe,
-        }),
-      })
+      const result = await apiService.login(emailOrUsername, password, rememberMe)
 
-      const payload: ApiResponse = await response.json()
-
-      if (!response.ok) {
-        throw new Error(payload.error || 'Login failed')
+      if (result.success && result.data?.user) {
+        if (isMountedRef.current) {
+          setUser(result.data.user)
+        }
+        router.push('/dashboard')
+      } else {
+        throw new Error(result.error || 'Login failed')
       }
-
-      const userData = payload?.data?.user || payload?.user
-      if (userData && isMountedRef.current) {
-        setUser(userData)
-      }
-
-      localStorage.setItem('token', payload?.data?.token || '')
-
-      router.push('/dashboard')
     } catch (error) {
       throw error
     } finally {
@@ -267,16 +173,42 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [router])
 
+  const signup = useCallback(async (userData: {
+    email: string
+    username: string
+    password: string
+    firstName?: string
+    lastName?: string
+  }) => {
+    if (isMountedRef.current) {
+      setLoading(true)
+    }
+    try {
+      const result = await apiService.register(userData)
+
+      if (result.success && result.data?.user) {
+        if (isMountedRef.current) {
+          setUser(result.data.user)
+        }
+        return { success: true, user: result.data.user }
+      } else {
+        const errorMessage = result.error || result.message || 'Signup failed'
+        return { success: false, error: errorMessage }
+      }
+    } catch (error) {
+      const errorMessage = 'Network error occurred'
+      console.error('Signup error:', error)
+      return { success: false, error: errorMessage }
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
+    }
+  }, [])
+
   const logout = useCallback(async () => {
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-csrf-token': getCookie('csrf-token') || '',
-        },
-        credentials: 'include',
-      })
+      await apiService.logout()
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
@@ -286,35 +218,61 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       router.push('/auth/login')
     }
-  }, [clearAuthData, getCookie, router])
+  }, [clearAuthData, router])
 
   const refreshAuth = useCallback(async () => {
-    try {
-      const response = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      })
+    if (isMountedRef.current) {
+      setLoading(true)
+    }
 
-      if (response.ok) {
-        const payload: ApiResponse = await response.json()
-        const userData = payload?.data?.user || payload?.user
-        if (userData && isMountedRef.current) {
-          setUser(userData)
-        }
-      } else {
-        clearAuthData()
+    try {
+      // Try to get current user
+      const result = await apiService.getMe()
+      
+      if (result.success && result.data?.user) {
         if (isMountedRef.current) {
-          setUser(null)
+          setUser(result.data.user)
+        }
+        return
+      }
+      
+      // If getMe failed, try to refresh token
+      if (result.code === 'UNAUTHORIZED' || result.code === 'SESSION_EXPIRED') {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Access token expired, attempting refresh...')
+        }
+        
+        const refreshResult = await apiService.refreshToken()
+        
+        if (refreshResult.success && refreshResult.data?.user) {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Token refresh successful')
+          }
+          if (isMountedRef.current) {
+            setUser(refreshResult.data.user)
+          }
+          return
+        } else {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Token refresh failed - user needs to login')
+          }
         }
       }
-    } catch (error) {
-      console.error('Token refresh failed:', error)
+      
+      // Clear auth data on any failure
       clearAuthData()
       if (isMountedRef.current) {
         setUser(null)
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error)
+      clearAuthData()
+      if (isMountedRef.current) {
+        setUser(null)
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false)
       }
     }
   }, [clearAuthData])
@@ -334,6 +292,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     loading,
     login,
+    signup,
     logout,
     refreshAuth,
     updateUser,

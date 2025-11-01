@@ -41,7 +41,7 @@ const customJestConfig = {
     '!src/app/layout.tsx',
     '!src/app/globals.css',
     '!src/middleware.ts',
-    '!src/lib/prisma.ts',
+
     '!src/lib/db.ts',
     '!src/lib/mock-db.ts',
     '!src/lib/test-utils.ts',
@@ -156,7 +156,7 @@ const customJestConfig = {
     '!src/app/layout.tsx',
     '!src/app/globals.css',
     '!src/middleware.ts',
-    '!src/lib/prisma.ts',
+
     '!src/lib/db.ts',
     '!src/lib/mock-db.ts',
     '!src/lib/test-utils.ts',

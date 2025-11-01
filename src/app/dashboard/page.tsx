@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import AccountSummary from '@/components/dashboard/AccountSummary';
+import { apiService } from '@/lib/api-service';
 
 interface User {
   id: string;
@@ -27,79 +28,49 @@ export default function DashboardPage() {
       try {
         console.log('🔍 Dashboard: Starting authentication check via cookies');
 
-        // Rely on HttpOnly cookies set by the server; no localStorage or client cookies
-        const response = await fetch('/api/auth/me', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        });
-
-        console.log('📡 Dashboard: /api/auth/me status:', response.status);
-
-        if (response.ok) {
-          const result = await response.json();
-          const data = result?.data || result; // apiResponse wraps under data
-
-          if (data?.user) {
-            console.log('✅ Dashboard: Authenticated as:', data.user.email);
-            setUser({
-              id: data.user.id,
-              email: data.user.email,
-              name: data.user.firstName || data.user.username || data.user.email,
-              role: data.user.role,
-              isActive: data.user.isActive,
-              createdAt: data.user.createdAt,
-              updatedAt: data.user.updatedAt,
-            });
-            setIsAuthenticated(true);
-            setError(null);
-            // Optional: cache user for UX only (no tokens)
-            localStorage.setItem('user_data', JSON.stringify(data.user));
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.setItem('_auth_timestamp', Date.now().toString());
-          } else {
-            throw new Error('Invalid response format');
-          }
-        } else if (response.status === 401) {
-          console.log('🔄 Dashboard: Access token missing/expired, attempting refresh...');
-          const refreshRes = await fetch('/api/auth/refresh', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
+        const result = await apiService.getMe();
+        
+        if (result.success && result.data?.user) {
+          console.log('✅ Dashboard: Authenticated as:', result.data.user.email);
+          setUser({
+            id: result.data.user.id,
+            email: result.data.user.email,
+            name: result.data.user.username || result.data.user.firstName || 'User',
+            role: result.data.user.role || 'USER',
+            isActive: result.data.user.isActive,
+            createdAt: result.data.user.createdAt?.toString() || new Date().toISOString(),
+            updatedAt: result.data.user.updatedAt?.toString() || new Date().toISOString(),
           });
+          setIsAuthenticated(true);
+          setError(null);
+          // Optional: cache user for UX only (no tokens)
+          localStorage.setItem('user_data', JSON.stringify(result.data.user));
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('_auth_timestamp', Date.now().toString());
+        } else if (result.error === 'Unauthorized') {
+          console.log('🔄 Dashboard: Access token missing/expired, attempting refresh...');
+          
+          try {
+            const refreshResult = await apiService.refreshToken();
 
-          if (refreshRes.ok) {
-            console.log('✅ Dashboard: Refresh succeeded, retrying /api/auth/me');
-            const retry = await fetch('/api/auth/me', {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              credentials: 'include',
-            });
-
-            if (retry.ok) {
-              const result = await retry.json();
-              const data = result?.data || result;
-
-              if (data?.user) {
-                console.log('✅ Dashboard: Authenticated after refresh as:', data.user.email);
+            if (refreshResult.success) {
+              console.log('✅ Dashboard: Refresh succeeded, retrying getMe');
+              const retryResult = await apiService.getMe();
+              
+              if (retryResult.success && retryResult.data?.user) {
+                console.log('✅ Dashboard: Authenticated after refresh as:', retryResult.data.user.email);
                 setUser({
-                  id: data.user.id,
-                  email: data.user.email,
-                  name: data.user.firstName || data.user.username || data.user.email,
-                  role: data.user.role,
-                  isActive: data.user.isActive,
-                  createdAt: data.user.createdAt,
-                  updatedAt: data.user.updatedAt,
+                  id: retryResult.data.user.id,
+                  email: retryResult.data.user.email,
+                  name: retryResult.data.user.username || retryResult.data.user.firstName || 'User',
+                  role: retryResult.data.user.role || 'USER',
+                  isActive: retryResult.data.user.isActive,
+                  createdAt: retryResult.data.user.createdAt?.toString() || new Date().toISOString(),
+                  updatedAt: retryResult.data.user.updatedAt?.toString() || new Date().toISOString(),
                 });
                 setIsAuthenticated(true);
                 setError(null);
-                localStorage.setItem('user_data', JSON.stringify(data.user));
+                localStorage.setItem('user_data', JSON.stringify(retryResult.data.user));
                 localStorage.setItem('isAuthenticated', 'true');
                 localStorage.setItem('_auth_timestamp', Date.now().toString());
               } else {
@@ -108,12 +79,12 @@ export default function DashboardPage() {
             } else {
               throw new Error('Authentication required');
             }
-          } else {
+          } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError);
             throw new Error('Authentication required');
           }
         } else {
-          const errorResult = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(errorResult.error || `HTTP ${response.status}`);
+          throw new Error(result.error || result.message || 'Authentication failed');
         }
       } catch (error) {
         console.error('❌ Dashboard: Authentication check failed:', error);
